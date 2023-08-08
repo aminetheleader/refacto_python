@@ -1,39 +1,14 @@
-# -*- coding: utf-8 -*-
 
-class GildedRose(object):
+class GildedRose:
+    def __init__(self, items: list):
+        self.items = []
+        for item in items:
+            item_class = ITEMS_MAPPING.get(item.name, Item)
+            self.items.append(item_class(item.name, item.sell_in, item.quality))
 
-    def __init__(self, items):
-        self.items = items
-
-    def update_quality(self):
+    def update_quality(self) -> None:
         for item in self.items:
-            if item.name != "Aged Brie" and item.name != "Backstage passes to a TAFKAL80ETC concert":
-                if item.quality > 0:
-                    if item.name != "Sulfuras, Hand of Ragnaros":
-                        item.quality = item.quality - 1
-            else:
-                if item.quality < 50:
-                    item.quality = item.quality + 1
-                    if item.name == "Backstage passes to a TAFKAL80ETC concert":
-                        if item.sell_in < 11:
-                            if item.quality < 50:
-                                item.quality = item.quality + 1
-                        if item.sell_in < 6:
-                            if item.quality < 50:
-                                item.quality = item.quality + 1
-            if item.name != "Sulfuras, Hand of Ragnaros":
-                item.sell_in = item.sell_in - 1
-            if item.sell_in < 0:
-                if item.name != "Aged Brie":
-                    if item.name != "Backstage passes to a TAFKAL80ETC concert":
-                        if item.quality > 0:
-                            if item.name != "Sulfuras, Hand of Ragnaros":
-                                item.quality = item.quality - 1
-                    else:
-                        item.quality = item.quality - item.quality
-                else:
-                    if item.quality < 50:
-                        item.quality = item.quality + 1
+            item.update()
 
 
 class Item:
@@ -42,5 +17,55 @@ class Item:
         self.sell_in = sell_in
         self.quality = quality
 
+    def update(self):
+        self.sell_in -= 1
+        if self.quality > 0:
+            self.quality -= 1 if (self.sell_in > 0) else min(2, self.quality)
+
     def __repr__(self):
-        return "%s, %s, %s" % (self.name, self.sell_in, self.quality)
+        return f"{self.name}, {self.sell_in}, {self.quality}"
+
+
+class AgedBrie(Item):
+    def update(self):
+        self.sell_in -= 1
+        if self.quality < 50:
+            self.quality += 1
+
+
+class Sulfuras(Item):
+    def __init__(self, name, sell_in, quality):
+        super().__init__(name, sell_in, quality)
+        self.quality = 80
+        self.sell_in = None
+
+    def update(self):
+        """
+        Nothing happens to Sulfuras
+        """
+        pass
+
+
+class BackstagePasses(Item):
+
+    def update(self):
+        """
+        Quality increases by 2 when there are 10 days or less and by 3 when there are 5 days or less but
+        Quality drops to 0 after the concert
+        """
+        self.sell_in -= 1
+        if 5 < self.sell_in <= 10:
+            self.quality += 2
+        elif 0 < self.sell_in <= 5:
+            self.quality += 3
+        elif self.sell_in <= 0:
+            self.quality = 0
+        elif self.quality < 50:
+            self.quality += 1
+
+
+ITEMS_MAPPING = {
+    "Aged Brie": AgedBrie,
+    "Sulfuras, Hand of Ragnaros": Sulfuras,
+    "Backstage passes to a TAFKAL80ETC concert": BackstagePasses,
+}
